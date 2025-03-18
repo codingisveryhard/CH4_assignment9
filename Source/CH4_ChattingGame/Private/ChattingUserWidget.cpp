@@ -19,6 +19,8 @@ void UChattingUserWidget::AddChattingMessage(UChattingMessageData* NewChatData)
         if (ChatListView)
         {
             ChatListView->AddItem(NewChatData);
+            // 리스트 뷰의 스크롤을 아래쪽으로 이동
+            ChatListView->ScrollToBottom();
         }
     }
 }
@@ -38,8 +40,11 @@ void UChattingUserWidget::OnChatSubmitted(const FText& Text, ETextCommit::Type C
         AChattingPlayerController* PC = GetOwningPlayer<AChattingPlayerController>();
         if (PC)
         {
+            // 채팅에 전달
             PC->SendChatMessage(Text.ToString());
             UE_LOG(LogTemp, Warning, TEXT("SendChatMessage called with: %s"), *Text.ToString());
+            // 야구 게임에 전달
+            PC->SendGuessMessage(Text.ToString());
         }
         else
         {

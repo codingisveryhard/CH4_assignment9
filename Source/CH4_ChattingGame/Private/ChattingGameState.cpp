@@ -37,3 +37,46 @@ void AChattingGameState::MulticastReceiveChatMessage_Implementation(const FStrin
         }
     }
 }
+
+
+void AChattingGameState::MulticastBroadcastResult_Implementation(const FString& ClientName, const int32& Strikes, const int32& Balls)
+{
+    // 클라이언트에서 결과를 표시
+    for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+    {
+        AChattingPlayerController* PC = Cast<AChattingPlayerController>(It->Get());
+        if (PC && PC->ChatUI)
+        {
+            UChattingMessageData* NewChatData = NewObject<UChattingMessageData>(PC);
+            if (NewChatData)
+            {
+                FString ResultMessage = FString::Printf(TEXT("%s님의 예측 결과: S: %d, B: %d, O: %d"), *ClientName, Strikes, Balls, 3 - Strikes - Balls);
+                // 메시지 텍스트 설정
+                NewChatData->SetMessageText(FText::FromString(ResultMessage));
+                // 채팅 UI의 리스트 뷰에 추가
+                PC->GetChatUI()->AddChattingMessage(NewChatData);
+            }
+        }
+    }
+}
+
+void AChattingGameState::MulticastDeclareWinner_Implementation(const FString& Winner, const FString& CorrectAnswer)
+{
+    // 모든 클라이언트에 승자 알림
+    FString WinnerMessage = FString::Printf(TEXT("%s님이 승리했습니다! 정답: %s"), *Winner, *CorrectAnswer);
+
+    // 모든 플레이어 컨트롤러에게 메시지 전송
+    for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+    {
+        AChattingPlayerController* PC = Cast<AChattingPlayerController>(It->Get());
+        if (PC && PC->ChatUI)
+        {
+            UChattingMessageData* NewChatData = NewObject<UChattingMessageData>(PC);
+            if (NewChatData)
+            {
+                NewChatData->SetMessageText(FText::FromString(WinnerMessage));
+                PC->ChatUI->AddChattingMessage(NewChatData);
+            }
+        }
+    }
+}

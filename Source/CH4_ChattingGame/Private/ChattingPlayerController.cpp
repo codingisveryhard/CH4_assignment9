@@ -1,4 +1,5 @@
 #include "ChattingPlayerController.h"
+#include "BaseballGameMode.h"
 #include "Blueprint/UserWidget.h"
 #include "UObject/ConstructorHelpers.h"
 #include "ChattingGameState.h"  // GameState 헤더 포함
@@ -56,6 +57,41 @@ void AChattingPlayerController::SetupUI()
     InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
     SetInputMode(InputMode);
     bShowMouseCursor = true;
+}
+
+void AChattingPlayerController::SendGuessMessage(const FString& GuessNumber)
+{    
+    // 서버 권한을 통해 소유주를 판별한다
+    FString PlayerName = HasAuthority() ? TEXT("Host") : TEXT("Guest");
+
+    UE_LOG(LogTemp, Warning, TEXT("AChattingPlayerController::SendGuessMessage called with: %s"), *GuessNumber);
+
+    ServerSendGuessMessage(PlayerName, GuessNumber);
+}
+
+bool AChattingPlayerController::ServerSendGuessMessage_Validate(const FString& PlayerName, const FString& GuessNumber)
+{
+    // 입력된 문자의 길이가 3자리가 아니면 취소
+    if (GuessNumber.Len() != 3) return false;
+
+    // 입력된 문자가 숫자가 아닐 시 취소
+    TSet<TCHAR> UniqueChars;
+    for (int32 i = 0; i < 3; i++)
+    {
+        if (!FChar::IsDigit(GuessNumber[i])) return false;
+        UniqueChars.Add(GuessNumber[i]);
+    }
+    // 입력된 문자가 중복될 시 취소
+    return UniqueChars.Num() == 3;
+}
+
+void AChattingPlayerController::ServerSendGuessMessage_Implementation(const FString& PlayerName, const FString& GuessNumber)
+{
+    ABaseballGameMode* GM = Cast<ABaseballGameMode>(GetWorld()->GetAuthGameMode());
+    if (GM)
+    {
+        GM->ProcessGuess(GuessNumber, PlayerName);
+    }
 }
 
 void AChattingPlayerController::ServerSendChatMessage_Implementation(const FString& PlayerName, const FString& Message)
