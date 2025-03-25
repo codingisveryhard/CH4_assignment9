@@ -2,7 +2,8 @@
 #include "BaseballGameMode.h"
 #include "Blueprint/UserWidget.h"
 #include "UObject/ConstructorHelpers.h"
-#include "ChattingGameState.h"  // GameState 헤더 포함
+#include "ChattingGameState.h"
+#include "BaseBallPlayerState.h"
 
 void AChattingPlayerController::BeginPlay()
 {
@@ -42,13 +43,13 @@ void AChattingPlayerController::BeginPlay()
 
 void AChattingPlayerController::SendChatMessage(const FString& Message)
 {
-    // 서버 권한을 통해 소유주를 판별한다
-    FString PlayerRole = HasAuthority() ? TEXT("Host") : TEXT("Guest");
-    FString PlayerName = PlayerRole + TEXT(": "); // "Host: " 또는 "Guest: "
+    ABaseBallPlayerState* CurrentPlayerState = GetPlayerState<ABaseBallPlayerState>();
+
+    if (!CurrentPlayerState) return;
 
     UE_LOG(LogTemp, Warning, TEXT("AChattingPlayerController::SendChatMessage called with: %s"), *Message);
 
-    ServerSendChatMessage(PlayerName, Message);
+    ServerSendChatMessage(CurrentPlayerState->PlayerNumber, Message);
 }
 
 void AChattingPlayerController::SetupUI()
@@ -61,15 +62,14 @@ void AChattingPlayerController::SetupUI()
 
 void AChattingPlayerController::SendGuessMessage(const FString& GuessNumber)
 {    
-    // 서버 권한을 통해 소유주를 판별한다
-    FString PlayerName = HasAuthority() ? TEXT("Host") : TEXT("Guest");
+    ABaseBallPlayerState* CurrentPlayerState = GetPlayerState<ABaseBallPlayerState>();
 
-    UE_LOG(LogTemp, Warning, TEXT("AChattingPlayerController::SendGuessMessage called with: %s"), *GuessNumber);
+    if (!CurrentPlayerState) return;
 
-    ServerSendGuessMessage(PlayerName, GuessNumber);
+    ServerSendGuessMessage(CurrentPlayerState->PlayerNumber, GuessNumber);
 }
 
-bool AChattingPlayerController::ServerSendGuessMessage_Validate(const FString& PlayerName, const FString& GuessNumber)
+bool AChattingPlayerController::ServerSendGuessMessage_Validate(const int32& PlayerNumber, const FString& GuessNumber)
 {
     // 입력된 문자의 길이가 3자리가 아니면 취소
     if (GuessNumber.Len() != 3) return false;
@@ -85,21 +85,47 @@ bool AChattingPlayerController::ServerSendGuessMessage_Validate(const FString& P
     return UniqueChars.Num() == 3;
 }
 
-void AChattingPlayerController::ServerSendGuessMessage_Implementation(const FString& PlayerName, const FString& GuessNumber)
+void AChattingPlayerController::ServerSendGuessMessage_Implementation(const int32& PlayerNumber, const FString& GuessNumber)
 {
-    ABaseballGameMode* GM = Cast<ABaseballGameMode>(GetWorld()->GetAuthGameMode());
-    if (GM)
+    // 3자리 숫자인지 확인하고 게임 로직 처리
+    if (GuessNumber.Len() == 3 && GuessNumber.IsNumeric())
     {
-        GM->ProcessGuess(GuessNumber, PlayerName);
+        UE_LOG(LogTemp, Warning, TEXT("AChattingPlayerController : ServerSendGuessMessage : Be Num"));
+        // 플레이어 상태 확인
+        ABaseBallPlayerState* PS = GetPlayerState<ABaseBallPlayerState>();
+        if (PS && PS->TryCount > 0)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("AChattingPlayerController : ServerSendGuessMessage : Be TryCount"));
+            // 시도 횟수 차감
+            PS->UseTry();
+
+            // 게임 모드에 추측 전달
+            ABaseballGameMode* BaseballGM = Cast<ABaseballGameMode>(GetWorld()->GetAuthGameMode());
+            if (BaseballGM)
+            {
+                UE_LOG(LogTemp, Warning, TEXT("AChattingPlayerController : ServerSendGuessMessage : Send GameMode"));
+                BaseballGM->ServerProcessGuess(GuessNumber, PlayerNumber);
+            }
+        }
+        else if (PS && PS->TryCount <= 0)
+        {
+            // 시도 횟수가 없을 때 메시지 표시
+            AChattingGameState* ChatGameState = GetWorld()->GetGameState<AChattingGameState>();
+            if (ChatGameState)
+            {
+                ChatGameState->MulticastReceiveChatMessage(TEXT("시스템: 남은 시도 횟수가 없습니다."));
+            }
+        }
     }
 }
 
-void AChattingPlayerController::ServerSendChatMessage_Implementation(const FString& PlayerName, const FString& Message)
+void AChattingPlayerController::ServerSendChatMessage_Implementation(const int32& PlayerNumber, const FString& Message)
 {
     AChattingGameState* ChatGameState = GetWorld()->GetGameState<AChattingGameState>();
     if (ChatGameState)
     {
-        FString FormattedMessage = PlayerName + Message;
+        
+        FString FormattedMessage = ChatGameState->GetPlayerName(PlayerNumber) + ": " + Message;
         ChatGameState->MulticastReceiveChatMessage(FormattedMessage);
         UE_LOG(LogTemp, Warning, TEXT("ServerSendChatMessage RPC called with: %s"), *FormattedMessage);
     }
@@ -109,7 +135,7 @@ void AChattingPlayerController::ServerSendChatMessage_Implementation(const FStri
     }
 }
 
-bool AChattingPlayerController::ServerSendChatMessage_Validate(const FString& PlayerName, const FString& Message)
+bool AChattingPlayerController::ServerSendChatMessage_Validate(const int32& PlayerNumber, const FString& Message)
 {
     return true;
 }

@@ -21,15 +21,28 @@ class CH4_CHATTINGGAME_API ABaseballGameMode : public AGameMode
 public:
     virtual void BeginPlay() override;
 
+    void PostLogin(APlayerController* NewPlayer) override;
+
+    // 
     UFUNCTION(Server, Reliable)
-    void ProcessGuess(const FString& Guess, const FString& PlayerName);
+    void ServerProcessGuess(const FString& Guess, const int32& PlayerNumber);
 
 private:
-    FString Answer; // 예: "1234"
+    // 서버에서 생성한 정답값
+    FString Answer;
+    // 현재 게임의 진행 상태를 표시하는 변수
     EGameState GameState;
 
+    // 겹치지 않는 랜덤한 3자리 숫자를 생성하는 함수
     void GenerateRandomNumber();
+    // 플레이어가 입력한 채팅 내용과 숫자를 비교하여 결과를 반환하는 함수
     void CompareNumbers(const FString& Guess, int32& Strikes, int32& Balls);
-    void BroadcastResult(const FString& PlayerName, int32 Strikes, int32 Balls);
-    void DeclareWinner(const FString& PlayerName);
+    // 
+    void BroadcastResult(const int32& PlayerNumber, int32 Strikes, int32 Balls);
+    void DeclareWinner(const int32& PlayerNumber);
+
+    void RestartGame();
+
+    void IsDrawGame(const FString& PlayerName);
+    void IsWinGame(const FString& PlayerName);
 };

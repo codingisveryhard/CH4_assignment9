@@ -31,7 +31,7 @@ public:
 
     // 클라이언트에서 호출하는 서버 RPC 함수
     UFUNCTION(Server, Reliable, WithValidation)
-    void ServerSendChatMessage(const FString& PlayerName, const FString& Message);
+    void ServerSendChatMessage(const int32& PlayerNumber, const FString& Message);
 
     // Chat UI에 접근할 수 있는 Getter
     UFUNCTION(BlueprintCallable)
@@ -47,6 +47,6 @@ public:
     void SendGuessMessage(const FString& GuessNumber);
 
     UFUNCTION(Server, Reliable, WithValidation)
-    void ServerSendGuessMessage(const FString& PlayerName, const FString& GuessNumber);
+    void ServerSendGuessMessage(const int32& PlayerNumber, const FString& GuessNumber);
 
 };

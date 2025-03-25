@@ -5,9 +5,9 @@
 #include "ChattingPlayerController.h"
 #include "ChattingUserWidget.h"
 #include "ChattingMessageData.h"
+#include "BaseBallPlayerState.h"
 #include "GameFramework/HUD.h"
 #include "Net/UnrealNetwork.h"
-
 
 void AChattingGameState::MulticastReceiveChatMessage_Implementation(const FString& Message)
 {
@@ -18,7 +18,7 @@ void AChattingGameState::MulticastReceiveChatMessage_Implementation(const FStrin
         AChattingPlayerController* PC = Cast<AChattingPlayerController>(It->Get());
         if (PC && PC->IsLocalController())
         {
-            UChattingUserWidget* ChatUI = PC->GetChatWidget();
+            UChattingUserWidget* ChatUI = PC->GetChatUI();
             if (ChatUI)
             {
                 ChatUI->DisplayChatMessage(Message);
@@ -78,5 +78,20 @@ void AChattingGameState::MulticastDeclareWinner_Implementation(const FString& Wi
                 PC->ChatUI->AddChattingMessage(NewChatData);
             }
         }
+    }
+}
+
+FString AChattingGameState::GetPlayerName(const int32& PlayerNumber)
+{
+    switch (PlayerNumber)
+    {
+    case 0:
+        return TEXT("Default");
+    case 1:
+        return TEXT("Host");
+    case 2:
+        return TEXT("Guest");
+    default:
+        return FString::Printf(TEXT("Player %d"), PlayerNumber);
     }
 }

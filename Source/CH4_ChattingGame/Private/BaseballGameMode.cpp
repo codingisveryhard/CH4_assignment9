@@ -4,6 +4,7 @@
 #include "BaseballGameMode.h"
 #include "ChattingPlayerController.h"
 #include "ChattingGameState.h"
+#include "BaseBallPlayerState.h"
 
 void ABaseballGameMode::BeginPlay()
 {
@@ -12,8 +13,24 @@ void ABaseballGameMode::BeginPlay()
     GameState = EGameState::InProgress;
 }
 
+void ABaseballGameMode::PostLogin(APlayerController* NewPlayer)
+{
+    Super::PostLogin(NewPlayer);
+
+    AChattingGameState* CurrentGameState = GetGameState<AChattingGameState>();
+
+    if (!CurrentGameState) return;
+
+    ABaseBallPlayerState* CurrentPlayerState = Cast<ABaseBallPlayerState>(NewPlayer->PlayerState);
+    if (CurrentPlayerState)
+    {
+        CurrentPlayerState->PlayerNumber = CurrentGameState->PlayerArray.Num();
+    }
+}
+
 void ABaseballGameMode::GenerateRandomNumber()
 {
+    Answer = "";
     // TSet을 이용해서 겹치지 않는 3자리 숫자 생성
     TSet<int32> UniqueNumbers;
     while (UniqueNumbers.Num() < 3)
@@ -55,34 +72,44 @@ void ABaseballGameMode::CompareNumbers(const FString& Guess, int32& Strikes, int
     }
 }
 
-void ABaseballGameMode::BroadcastResult(const FString& PlayerName, int32 Strikes, int32 Balls)
+void ABaseballGameMode::BroadcastResult(const int32& PlayerNumber, int32 Strikes, int32 Balls)
 {
     AChattingGameState* GS = GetGameState<AChattingGameState>();
     if (GS)
     {
+        FString PlayerName = GS->GetPlayerName(PlayerNumber);
         GS->MulticastBroadcastResult(PlayerName, Strikes, Balls);
     }
 }
 
-void ABaseballGameMode::DeclareWinner(const FString& PlayerName)
+void ABaseballGameMode::DeclareWinner(const int32& PlayerNumber)
 {
     AChattingGameState* GS = GetGameState<AChattingGameState>();
     if (GS)
     {
+        FString PlayerName = GS->GetPlayerName(PlayerNumber);
         GS->MulticastDeclareWinner(PlayerName, Answer);
     }
 }
 
-void ABaseballGameMode::ProcessGuess_Implementation(const FString& Guess, const FString& PlayerName)
+void ABaseballGameMode::RestartGame()
 {
+    GenerateRandomNumber();
+    GameState = EGameState::InProgress;
+}
+
+void ABaseballGameMode::ServerProcessGuess_Implementation(const FString& Guess, const int32& PlayerNumber)
+{
+    UE_LOG(LogTemp, Warning, TEXT("ABaseballGameMode : ServerProcessGuess : Start"));
     if (GameState != EGameState::InProgress) return;
 
     int32 Strikes = 0, Balls = 0;
     CompareNumbers(Guess, Strikes, Balls);
-    BroadcastResult(PlayerName, Strikes, Balls);
+    BroadcastResult(PlayerNumber, Strikes, Balls);
 
     if (Strikes == Answer.Len()) {
-        DeclareWinner(PlayerName);
+        DeclareWinner(PlayerNumber);
         GameState = EGameState::Finished;
+        RestartGame();
     }
 }

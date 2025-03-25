@@ -14,7 +14,9 @@ public:
     UFUNCTION(NetMulticast, Reliable)
     void MulticastReceiveChatMessage(const FString& Message);
 
-
+    //FString PlayerName;
+    //int32 Strikes;
+    //int32 Balls;
 
     // 야구 게임 관련
     UFUNCTION(NetMulticast, Reliable)
@@ -22,4 +24,8 @@ public:
 
     UFUNCTION(NetMulticast, Reliable)
     void MulticastDeclareWinner(const FString& Winner, const FString& CorrectAnswer);
+
+
+
+    FString GetPlayerName(const int32& PlayerNumber);
 };
