@@ -19,7 +19,6 @@ void ABaseBallPlayerState::UseTryCount()
     if (HasAuthority() && TryCount > 0)
     {
         TryCount--;
-        UE_LOG(LogTemp, Warning, TEXT("ABaseBallPlayerState : UseTry : Remain TryCount : %d"), TryCount);
     }
 }
 
@@ -28,7 +27,6 @@ void ABaseBallPlayerState::AddWinCount()
     if (HasAuthority())
     {
         WinCount++;
-        UE_LOG(LogTemp, Warning, TEXT("ABaseBallPlayerState : UseTry : Current WinCount : %d"), WinCount);
     }
 }
 
@@ -66,7 +64,6 @@ void ABaseBallPlayerState::SetPlayerNickname(const FString& NewPlayerName)
 
 void ABaseBallPlayerState::OnRep_PlayerNickname()
 {
-    UE_LOG(LogTemp, Warning, TEXT("[클라이언트] 닉네임 업데이트: %s"), *PlayerNickname);
     OnPlayerNicknameUpdated.Broadcast(PlayerNickname);
 }
 

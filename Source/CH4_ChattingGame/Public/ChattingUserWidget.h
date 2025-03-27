@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "ChattingGameState.h"
 #include "ChattingUserWidget.generated.h"
 
 class UListView;
@@ -37,6 +38,9 @@ public:
 	UPROPERTY(meta = (BindWidget))
 	UBorder* NameBorder;
 
+	UPROPERTY(meta = (BindWidget))
+	UListView* ScoreListView;
+
 	UFUNCTION(BlueprintCallable)
 	void AddChattingMessage(UChattingMessageData* NewChatData);
 
@@ -48,6 +52,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Chat")
 	void ResetChat();
+
+	UFUNCTION(BlueprintCallable)
+	void UpdateScoreboard();
 
     virtual void NativeConstruct() override;
 

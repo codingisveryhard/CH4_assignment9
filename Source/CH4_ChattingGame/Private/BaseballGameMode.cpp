@@ -53,8 +53,6 @@ void ABaseballGameMode::UpdateTurnTimer()
     CurrentGameState->RemainingTurnTime -= 1.f;
     /*CurrentGameState->MulticastUpdateTurnTime(CurrentGameState->RemainingTurnTime);*/
 
-    UE_LOG(LogTemp, Warning, TEXT("서버 타이머 업데이트: %.1f초"), CurrentGameState->RemainingTurnTime);
-
     // 시간 종료 시 턴 넘김
     if (CurrentGameState->RemainingTurnTime <= 0)
     {
@@ -97,7 +95,6 @@ void ABaseballGameMode::GenerateRandomNumber()
 
 void ABaseballGameMode::CompareNumbers(const FString& Guess, int32& Strikes, int32& Balls)
 {
-    UE_LOG(LogTemp, Warning, TEXT("ABaseballGameMode : BeginPlay"));
     for (int32 i = 0; i < 3; i++)
     {
         for (int32 j = 0; j < 3; j++)
@@ -193,10 +190,8 @@ void ABaseballGameMode::ServerProcessGuess_Implementation(const FString& Guess, 
     AChattingGameState* ServerGameState = GetGameState<AChattingGameState>();
     if (!ServerGameState || BaseballGameState != EGameState::InProgress) return;
 
-    // 1️⃣ 현재 턴 플레이어 검증
     if (PlayerNumber != ServerGameState->CurrentTurnPlayerNumber)
     {
-        // 클라이언트에 "잘못된 턴" 메시지 전송
         if (APlayerController* PC = GetGameInstance()->GetFirstLocalPlayerController())
         {
             PC->ClientMessage(FString::Printf(TEXT("당신의 차례가 아닙니다!")));
@@ -204,7 +199,6 @@ void ABaseballGameMode::ServerProcessGuess_Implementation(const FString& Guess, 
         return;
     }
 
-    // 2️⃣ 시도 가능 여부 확인
     ABaseBallPlayerState* PS = nullptr;
     for (APlayerState* PlayerState : ServerGameState->PlayerArray)
     {
@@ -231,8 +225,9 @@ void ABaseballGameMode::ServerProcessGuess_Implementation(const FString& Guess, 
     }
     else
     {
-        // 다음 턴 플레이어 계산 (1 ↔ 2 전환)
-        int32 NewTurn = (ServerGameState->CurrentTurnPlayerNumber == 1) ? 2 : 1;
+        int32 CurrentIndex = ServerGameState->CurrentTurnPlayerNumber;
+        int32 NewIndex = CurrentIndex % ServerGameState->PlayerArray.Num();
+        int32 NewTurn = NewIndex + 1;
         ServerGameState->MulticastUpdateTurn(NewTurn);
     }
 

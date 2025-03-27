@@ -11,8 +11,6 @@
 
 void AChattingGameState::MulticastReceiveChatMessage_Implementation(const FString& Message)
 {
-    UE_LOG(LogTemp, Log, TEXT("Chat Message: %s"), *Message);
-
     for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
     {
         AChattingPlayerController* PC = Cast<AChattingPlayerController>(It->Get());
@@ -85,8 +83,6 @@ void AChattingGameState::MulticastDeclareWinner_Implementation(const FString& Wi
 void AChattingGameState::MulticastUpdateTurn_Implementation(int32 NewTurnNumber)
 {
     CurrentTurnPlayerNumber = NewTurnNumber;
-    // UI 업데이트 로직 추가 가능
-    UE_LOG(LogTemp, Warning, TEXT("Current Turn: Player %d"), NewTurnNumber);
 }
 
 void AChattingGameState::MulticastBroadcastSystemMessage_Implementation(const FString& SystemMessage)
@@ -120,11 +116,21 @@ FString AChattingGameState::GetPlayerName(const int32& PlayerNumber)
 
 void AChattingGameState::OnRep_RemainingTurnTime()
 {
-    // 변수 변경 시 실행할 로직
-    UE_LOG(LogTemp, Warning, TEXT("남은 턴 시간 업데이트: %.1f초"), RemainingTurnTime);
-
-    // UI 갱신을 위한 이벤트 발생 (선택사항)
     OnTurnTimeUpdated.Broadcast(RemainingTurnTime);
+}
+
+TArray<FPlayerScoreInfo> AChattingGameState::GetAllPlayerScores() const
+{
+    TArray<FPlayerScoreInfo> Scores;
+    for (APlayerState* CurrentPlayerState : PlayerArray) {
+        if (ABaseBallPlayerState * TargetPlayerState = Cast<ABaseBallPlayerState>(CurrentPlayerState)) {
+            FPlayerScoreInfo Info;
+            Info.PlayerName = TargetPlayerState->PlayerNickname;
+            Info.Wins = TargetPlayerState->WinCount;
+            Scores.Add(Info);
+        }
+    }
+    return Scores;
 }
 
 void AChattingGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

@@ -7,6 +7,19 @@
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnTurnTimeUpdated, float, NewTime);
 
+USTRUCT(BlueprintType)
+struct FPlayerScoreInfo {
+    GENERATED_BODY()
+
+    UPROPERTY(BlueprintReadOnly)
+    FString PlayerName;
+
+    UPROPERTY(BlueprintReadOnly)
+    int32 Wins;
+
+    FPlayerScoreInfo() : PlayerName("Unknown"), Wins(0) {}
+};
+
 UCLASS()
 class CH4_CHATTINGGAME_API AChattingGameState : public AGameState
 {
@@ -53,6 +66,10 @@ public:
     // 타이머 업데이트 알림 함수
     UFUNCTION(NetMulticast, Reliable)
     void MulticastUpdateTurnTime(float NewTime);
+
+    // 모든 플레이어의 스코어 정보를 반환하는 함수
+    UFUNCTION(BlueprintCallable, Category = "Scoreboard")
+    TArray<FPlayerScoreInfo> GetAllPlayerScores() const;
 
 
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;

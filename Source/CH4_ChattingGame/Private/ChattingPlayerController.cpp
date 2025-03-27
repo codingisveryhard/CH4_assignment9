@@ -25,8 +25,6 @@ void AChattingPlayerController::SendChatMessage(const FString& Message)
 
     if (!CurrentPlayerState) return;
 
-    UE_LOG(LogTemp, Warning, TEXT("AChattingPlayerController::SendChatMessage called with: %s"), *Message);
-
     ServerSendChatMessage(CurrentPlayerState->PlayerNumber, Message);
 }
 

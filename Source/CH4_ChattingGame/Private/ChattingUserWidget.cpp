@@ -4,8 +4,8 @@
 #include "ChattingUserWidget.h"
 #include "ChattingPlayerController.h"
 #include "ChattingMessageData.h"
-#include "ChattingGameState.h"
 #include "BaseBallPlayerState.h"
+#include "ScoreData.h"
 #include "Components/EditableTextBox.h"
 #include "Components/TextBlock.h"
 #include "Components/Border.h"
@@ -20,6 +20,7 @@ void UChattingUserWidget::UpdateUIDisplay(float Seconds)
     TimerText->SetText(FText::FromString(TimeString));
 
     UpdateNickname();
+    UpdateScoreboard();
 }
 
 void UChattingUserWidget::RefreshTimerDisplay()
@@ -73,10 +74,27 @@ void UChattingUserWidget::UpdateNickname()
                 if (NicknameText)
                 {
                     NicknameText->SetText(FText::FromString(LastNicknameText));
-                    UE_LOG(LogTemp, Warning, TEXT("닉네임 업데이트: %s"), *LastNicknameText);
                 }
             }
         }
+    }
+}
+
+void UChattingUserWidget::UpdateScoreboard()
+{
+    AChattingGameState* GameState = GetWorld()->GetGameState<AChattingGameState>();
+    if (!GameState) return;
+    TArray<FPlayerScoreInfo> Scores = GameState->GetAllPlayerScores();
+
+    if (!ScoreListView) return;
+
+    ScoreListView->ClearListItems();
+
+    for (const FPlayerScoreInfo& Score : Scores) {
+        UScoreData* ScoreData = NewObject<UScoreData>();
+        ScoreData->PlayerName = Score.PlayerName;
+        ScoreData->Wins = Score.Wins;
+        ScoreListView->AddItem(ScoreData);
     }
 }
 
@@ -109,8 +127,6 @@ void UChattingUserWidget::OnChatSubmitted(const FText& Text, ETextCommit::Type C
     // 엔터 외의 입력일 시 무시
     if (CommitMethod != ETextCommit::OnEnter) return;
 
-    UE_LOG(LogTemp, Warning, TEXT("OnChatSubmitted called: %s, CommitMethod: %d"), *Text.ToString(), (int32)CommitMethod);
-
     if (CommitMethod == ETextCommit::OnEnter)
     {
         AChattingPlayerController* PC = GetOwningPlayer<AChattingPlayerController>();
@@ -118,7 +134,6 @@ void UChattingUserWidget::OnChatSubmitted(const FText& Text, ETextCommit::Type C
         {
             // 채팅에 전달
             PC->SendChatMessage(Text.ToString());
-            UE_LOG(LogTemp, Warning, TEXT("SendChatMessage called with: %s"), *Text.ToString());
             // 야구 게임에 전달
             PC->SendGuessMessage(Text.ToString());
         }
@@ -140,8 +155,6 @@ void UChattingUserWidget::DisplayChatMessage(const FString& Message)
 
     FString CurrentText = ChatDisplay->GetText().ToString();
     FString NewText = CurrentText + "\n" + Message;
-
-    UE_LOG(LogTemp, Warning, TEXT("Updating ChatDisplay: %s"), *NewText);
 
     ChatDisplay->SetText(FText::FromString(NewText));
 }
@@ -169,7 +182,6 @@ void UChattingUserWidget::NativeConstruct()
     if (ChatInputBox)
     {
         ChatInputBox->OnTextCommitted.AddDynamic(this, &UChattingUserWidget::OnChatSubmitted);
-        UE_LOG(LogTemp, Warning, TEXT("OnTextCommitted event bound to OnChatSubmitted"));
     }
     else
     {
