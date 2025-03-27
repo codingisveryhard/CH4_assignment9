@@ -4,12 +4,15 @@
 #include "ChattingUserWidget.h"
 #include "ChattingPlayerController.h"
 #include "ChattingMessageData.h"
+#include "BaseballGameMode.h"
 #include "BaseBallPlayerState.h"
 #include "ScoreData.h"
 #include "Components/EditableTextBox.h"
 #include "Components/TextBlock.h"
 #include "Components/Border.h"
 #include "Components/ListView.h"
+#include "Components/Button.h"
+#include "Kismet/GameplayStatics.h"
 
 
 void UChattingUserWidget::UpdateUIDisplay(float Seconds)
@@ -107,6 +110,32 @@ void UChattingUserWidget::OnPlayerNicknameUpdated(const FString& NewNickname)
     }
 }
 
+void UChattingUserWidget::OnGameStartClicked()
+{
+    if (!IsHost())
+    {
+        return;
+    }
+
+    ABaseballGameMode* GM = Cast<ABaseballGameMode>(UGameplayStatics::GetGameMode(this));
+    if (GM && GM->HasAuthority())
+    {
+        GM->RestartGame();
+    }
+}
+
+bool UChattingUserWidget::IsHost() const
+{
+    APlayerController* CurrentPlayerController = GetOwningPlayer();
+    if (!CurrentPlayerController)
+    {
+        return false;
+    }
+
+    // 서버 권한(호스트) 여부 반환
+    return CurrentPlayerController->HasAuthority();
+}
+
 void UChattingUserWidget::AddChattingMessage(UChattingMessageData* NewChatData)
 {
     if (NewChatData)
@@ -199,6 +228,23 @@ void UChattingUserWidget::NativeConstruct()
             }
         }
     }
+
+    if (GameStartButton)
+    {
+        // 버튼 클릭 이벤트 바인딩
+        GameStartButton->OnClicked.AddDynamic(this, &UChattingUserWidget::OnGameStartClicked);
+
+        // 호스트 여부에 따라 버튼 가시성 설정
+        if (IsHost())
+        {
+            GameStartButton->SetVisibility(ESlateVisibility::Visible);
+        }
+        else
+        {
+            GameStartButton->SetVisibility(ESlateVisibility::Hidden);
+        }
+    }
+
     // 기존 코드
     //if (AChattingGameState* CurrentGameState = GetWorld()->GetGameState<AChattingGameState>())
     //{

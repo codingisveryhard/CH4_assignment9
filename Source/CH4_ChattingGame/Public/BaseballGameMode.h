@@ -39,6 +39,8 @@ public:
 
     void EndTurn();
 
+    void RestartGame();
+
 private:
     // 서버에서 생성한 정답값
     FString Answer;
@@ -55,7 +57,6 @@ private:
 
     void BroadcastSystemMessage(const FString& SystemMessage);
 
-    void RestartGame();
     void ResetAllPlayerTryCount();
 
     bool IsThreeNumber();

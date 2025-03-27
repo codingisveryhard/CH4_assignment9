@@ -9,8 +9,8 @@
 void ABaseballGameMode::BeginPlay()
 {
     Super::BeginPlay();
-    GenerateRandomNumber();
-    BaseballGameState = EGameState::InProgress;
+
+    BaseballGameState = EGameState::Finished;
 }
 
 void ABaseballGameMode::PostLogin(APlayerController* NewPlayer)
@@ -155,10 +155,12 @@ void ABaseballGameMode::BroadcastSystemMessage(const FString& SystemMessage)
 
 void ABaseballGameMode::RestartGame()
 {
+    if (BaseballGameState != EGameState::Finished) return;
+
     GenerateRandomNumber();
     BaseballGameState = EGameState::InProgress;
     ResetAllPlayerTryCount();
-    // 턴 초기화
+    
     if (AChattingGameState* ServerGameState = GetGameState<AChattingGameState>())
     {
         ServerGameState->CurrentTurnPlayerNumber = 1;
@@ -221,7 +223,7 @@ void ABaseballGameMode::ServerProcessGuess_Implementation(const FString& Guess, 
     {
         DeclareWinner(PlayerNumber);
         BaseballGameState = EGameState::Finished;
-        RestartGame();
+        return;
     }
     else
     {

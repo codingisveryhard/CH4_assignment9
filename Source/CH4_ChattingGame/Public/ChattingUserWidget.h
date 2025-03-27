@@ -10,6 +10,7 @@
 class UListView;
 class UBorder;
 class UChattingMessageData;
+class UButton;
 
 UCLASS()
 class CH4_CHATTINGGAME_API UChattingUserWidget : public UUserWidget
@@ -40,6 +41,9 @@ public:
 
 	UPROPERTY(meta = (BindWidget))
 	UListView* ScoreListView;
+
+	UPROPERTY(meta = (BindWidget))
+	UButton* GameStartButton;
 
 	UFUNCTION(BlueprintCallable)
 	void AddChattingMessage(UChattingMessageData* NewChatData);
@@ -79,4 +83,9 @@ private:
 
 	UFUNCTION()
 	void OnPlayerNicknameUpdated(const FString& NewNickname);
+
+	UFUNCTION()
+	void OnGameStartClicked();
+
+	bool IsHost() const;
 };
