@@ -7,6 +7,7 @@
 #include "ChattingUserWidget.generated.h"
 
 class UListView;
+class UBorder;
 class UChattingMessageData;
 
 UCLASS()
@@ -21,21 +22,23 @@ public:
     UPROPERTY(meta = (BindWidget))
     class UTextBlock* ChatDisplay;
 
-public:
 	UPROPERTY(meta = (BindWidget))
 	UListView* ChatListView;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Chat")
 	UChattingMessageData* ChatData;
 
+	UPROPERTY(meta = (BindWidget))
+	UTextBlock* TimerText;
+
+	UPROPERTY(meta = (BindWidget))
+	UTextBlock* NicknameText;
+
+	UPROPERTY(meta = (BindWidget))
+	UBorder* NameBorder;
 
 	UFUNCTION(BlueprintCallable)
 	void AddChattingMessage(UChattingMessageData* NewChatData);
-
-	// 이후 필터용으로 사용 예정
-	//UFUNCTION(BlueprintCallable)
-	//void FilterChatMessages();
-
 
 
     UFUNCTION()
@@ -43,9 +46,30 @@ public:
 
     void DisplayChatMessage(const FString& Message);
 
+	UFUNCTION(BlueprintCallable, Category = "Chat")
+	void ResetChat();
+
     virtual void NativeConstruct() override;
 
 protected:
 	UPROPERTY()
 	TArray<UChattingMessageData*> AllChatMessages;
+
+private:
+	UFUNCTION(BlueprintCallable)
+	void UpdateUIDisplay(float Seconds);
+
+	FTimerHandle TimerUpdateHandle;
+
+	FString LastNicknameText;
+
+	UFUNCTION()
+	void RefreshTimerDisplay();
+
+	void UpdateTurnColor();
+
+	void UpdateNickname();
+
+	UFUNCTION()
+	void OnPlayerNicknameUpdated(const FString& NewNickname);
 };

@@ -16,29 +16,7 @@ void AChattingPlayerController::BeginPlay()
         return;
     }
 
-    if (ChatUI == nullptr)
-    {
-        static TSubclassOf<UChattingUserWidget> ChatWidgetClass = LoadClass<UChattingUserWidget>(nullptr, TEXT("/Game/Blueprints/WBP_ChattingUserWidget.WBP_ChattingUserWidget_C"));
-        if (ChatWidgetClass)
-        {
-            // 'this'를 소유자로 전달해서 위젯을 생성
-            ChatUI = CreateWidget<UChattingUserWidget>(this, ChatWidgetClass);
-            if (ChatUI)
-            {
-                ChatUI->AddToViewport();
-                UE_LOG(LogTemp, Warning, TEXT("ChatUI successfully created and added to viewport."));
-            }
-            else
-            {
-                UE_LOG(LogTemp, Error, TEXT("Failed to create ChatUI widget."));
-            }
-        }
-        else
-        {
-            UE_LOG(LogTemp, Error, TEXT("ChatWidgetClass not found."));
-        }
-    }
-    SetupUI();
+    ShowLoginWidget();
 }
 
 void AChattingPlayerController::SendChatMessage(const FString& Message)
@@ -69,20 +47,78 @@ void AChattingPlayerController::SendGuessMessage(const FString& GuessNumber)
     ServerSendGuessMessage(CurrentPlayerState->PlayerNumber, GuessNumber);
 }
 
+void AChattingPlayerController::ShowLoginWidget()
+{
+    if (!LoginUI && LoginWidgetClass)
+    {
+        LoginUI = CreateWidget<ULoginWidget>(this, LoginWidgetClass);
+    }
+
+    if (LoginUI)
+    {
+        // 초기 로그인 창에 떠오를 기본 닉네임
+        //ABaseBallPlayerState* CurrentPlayerState = GetPlayerState<ABaseBallPlayerState>();
+        //if (CurrentPlayerState)
+        //{
+        //    LoginUI->SetDefaultName(CurrentPlayerState->PlayerNickname);
+        //}
+        // 기존 위젯 제거
+        if (ChatUI) ChatUI->RemoveFromParent();
+
+        // 로그인 위젯 표시
+        LoginUI->AddToViewport();
+        SetInputMode(FInputModeUIOnly());
+        bShowMouseCursor = true;
+    }
+}
+
+void AChattingPlayerController::ShowGameWidget()
+{
+    if (!ChatUI && GameWidgetClass)
+    {
+        ChatUI = CreateWidget<UChattingUserWidget>(this, GameWidgetClass);
+    }
+
+    if (ChatUI)
+    {
+        // 로그인 위젯 제거
+        if (LoginUI) LoginUI->RemoveFromParent();
+
+        // 게임 위젯 표시
+        ChatUI->AddToViewport();
+        SetInputMode(FInputModeGameAndUI());
+        bShowMouseCursor = true; // 필요에 따라 조절
+    }
+}
+
+void AChattingPlayerController::ServerSetPlayerNickname_Implementation(const FString& NewNickname)
+{
+    if (ABaseBallPlayerState* PS = GetPlayerState<ABaseBallPlayerState>())
+    {
+        PS->SetPlayerNickname(NewNickname);
+    }
+}
+
+bool AChattingPlayerController::ServerSetPlayerNickname_Validate(const FString& NewNickname)
+{
+    return true;
+}
+
 bool AChattingPlayerController::ServerSendGuessMessage_Validate(const int32& PlayerNumber, const FString& GuessNumber)
 {
-    // 입력된 문자의 길이가 3자리가 아니면 취소
-    if (GuessNumber.Len() != 3) return false;
+    //// 입력된 문자의 길이가 3자리가 아니면 취소
+    //if (GuessNumber.Len() != 3) return false;
 
-    // 입력된 문자가 숫자가 아닐 시 취소
-    TSet<TCHAR> UniqueChars;
-    for (int32 i = 0; i < 3; i++)
-    {
-        if (!FChar::IsDigit(GuessNumber[i])) return false;
-        UniqueChars.Add(GuessNumber[i]);
-    }
-    // 입력된 문자가 중복될 시 취소
-    return UniqueChars.Num() == 3;
+    //// 입력된 문자가 숫자가 아닐 시 취소
+    //TSet<TCHAR> UniqueChars;
+    //for (int32 i = 0; i < 3; i++)
+    //{
+    //    if (!FChar::IsDigit(GuessNumber[i])) return false;
+    //    UniqueChars.Add(GuessNumber[i]);
+    //}
+    //// 입력된 문자가 중복될 시 취소
+    //return UniqueChars.Num() == 3;
+    return true;
 }
 
 void AChattingPlayerController::ServerSendGuessMessage_Implementation(const int32& PlayerNumber, const FString& GuessNumber)
@@ -90,20 +126,14 @@ void AChattingPlayerController::ServerSendGuessMessage_Implementation(const int3
     // 3자리 숫자인지 확인하고 게임 로직 처리
     if (GuessNumber.Len() == 3 && GuessNumber.IsNumeric())
     {
-        UE_LOG(LogTemp, Warning, TEXT("AChattingPlayerController : ServerSendGuessMessage : Be Num"));
         // 플레이어 상태 확인
         ABaseBallPlayerState* PS = GetPlayerState<ABaseBallPlayerState>();
         if (PS && PS->TryCount > 0)
         {
-            UE_LOG(LogTemp, Warning, TEXT("AChattingPlayerController : ServerSendGuessMessage : Be TryCount"));
-            // 시도 횟수 차감
-            PS->UseTry();
-
             // 게임 모드에 추측 전달
             ABaseballGameMode* BaseballGM = Cast<ABaseballGameMode>(GetWorld()->GetAuthGameMode());
             if (BaseballGM)
             {
-                UE_LOG(LogTemp, Warning, TEXT("AChattingPlayerController : ServerSendGuessMessage : Send GameMode"));
                 BaseballGM->ServerProcessGuess(GuessNumber, PlayerNumber);
             }
         }
@@ -127,7 +157,6 @@ void AChattingPlayerController::ServerSendChatMessage_Implementation(const int32
         
         FString FormattedMessage = ChatGameState->GetPlayerName(PlayerNumber) + ": " + Message;
         ChatGameState->MulticastReceiveChatMessage(FormattedMessage);
-        UE_LOG(LogTemp, Warning, TEXT("ServerSendChatMessage RPC called with: %s"), *FormattedMessage);
     }
     else
     {

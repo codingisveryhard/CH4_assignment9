@@ -76,22 +76,77 @@ void AChattingGameState::MulticastDeclareWinner_Implementation(const FString& Wi
             {
                 NewChatData->SetMessageText(FText::FromString(WinnerMessage));
                 PC->ChatUI->AddChattingMessage(NewChatData);
+                
             }
         }
     }
 }
 
-FString AChattingGameState::GetPlayerName(const int32& PlayerNumber)
+void AChattingGameState::MulticastUpdateTurn_Implementation(int32 NewTurnNumber)
 {
-    switch (PlayerNumber)
+    CurrentTurnPlayerNumber = NewTurnNumber;
+    // UI 업데이트 로직 추가 가능
+    UE_LOG(LogTemp, Warning, TEXT("Current Turn: Player %d"), NewTurnNumber);
+}
+
+void AChattingGameState::MulticastBroadcastSystemMessage_Implementation(const FString& SystemMessage)
+{
+}
+
+void AChattingGameState::MulticastUpdateTurnTime_Implementation(float NewTime)
+{
+    RemainingTurnTime = NewTime;
+
+    if (!HasAuthority()) // 클라이언트에서만 실행
     {
-    case 0:
-        return TEXT("Default");
-    case 1:
-        return TEXT("Host");
-    case 2:
-        return TEXT("Guest");
-    default:
-        return FString::Printf(TEXT("Player %d"), PlayerNumber);
+        OnRep_RemainingTurnTime();
     }
 }
+
+FString AChattingGameState::GetPlayerName(const int32& PlayerNumber)
+{
+    for (APlayerState* PS : PlayerArray)
+    {
+        if (ABaseBallPlayerState* PlayerState = Cast<ABaseBallPlayerState>(PS))
+        {
+            if (PlayerState->PlayerNumber == PlayerNumber)
+            {
+                return PlayerState->PlayerNickname;
+            }
+        }
+    }
+    return TEXT("Unknown Player"); // 기본값
+}
+
+void AChattingGameState::OnRep_RemainingTurnTime()
+{
+    // 변수 변경 시 실행할 로직
+    UE_LOG(LogTemp, Warning, TEXT("남은 턴 시간 업데이트: %.1f초"), RemainingTurnTime);
+
+    // UI 갱신을 위한 이벤트 발생 (선택사항)
+    OnTurnTimeUpdated.Broadcast(RemainingTurnTime);
+}
+
+void AChattingGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+    DOREPLIFETIME(AChattingGameState, CurrentTurnPlayerNumber);
+    DOREPLIFETIME(AChattingGameState, RemainingTurnTime);
+}
+
+
+//FString AChattingGameState::GetPlayerName(const int32& PlayerNumber)
+//{
+//    switch (PlayerNumber)
+//    {
+//    case 0:
+//        return TEXT("Default");
+//    case 1:
+//        return TEXT("Host");
+//    case 2:
+//        return TEXT("Guest");
+//    default:
+//        return FString::Printf(TEXT("Player %d"), PlayerNumber);
+//    }
+//}

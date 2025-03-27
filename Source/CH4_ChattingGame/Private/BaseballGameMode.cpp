@@ -10,7 +10,7 @@ void ABaseballGameMode::BeginPlay()
 {
     Super::BeginPlay();
     GenerateRandomNumber();
-    GameState = EGameState::InProgress;
+    BaseballGameState = EGameState::InProgress;
 }
 
 void ABaseballGameMode::PostLogin(APlayerController* NewPlayer)
@@ -25,7 +25,55 @@ void ABaseballGameMode::PostLogin(APlayerController* NewPlayer)
     if (CurrentPlayerState)
     {
         CurrentPlayerState->PlayerNumber = CurrentGameState->PlayerArray.Num();
+
+        // 초기 디폴트 네임 설정
+        //CurrentPlayerState->SetDefaultNickname(CurrentPlayerState->PlayerNumber);
     }
+}
+
+void ABaseballGameMode::StartTurnTimer()
+{
+    AChattingGameState* CurrentGameState = GetGameState<AChattingGameState>();
+    if (!CurrentGameState) return;
+
+    // 타이머 초기화
+    CurrentGameState->RemainingTurnTime = CurrentGameState->MaxTurnTime;
+    CurrentGameState->MulticastUpdateTurnTime(CurrentGameState->RemainingTurnTime);
+
+    // 1초 간격으로 타이머 업데이트
+    GetWorldTimerManager().SetTimer(TurnTimerHandle, this, &ABaseballGameMode::UpdateTurnTimer, 1.f, true);
+}
+
+void ABaseballGameMode::UpdateTurnTimer()
+{
+    AChattingGameState* CurrentGameState = GetGameState<AChattingGameState>();
+    if (!CurrentGameState) return;
+
+    // 남은 시간 감소
+    CurrentGameState->RemainingTurnTime -= 1.f;
+    /*CurrentGameState->MulticastUpdateTurnTime(CurrentGameState->RemainingTurnTime);*/
+
+    UE_LOG(LogTemp, Warning, TEXT("서버 타이머 업데이트: %.1f초"), CurrentGameState->RemainingTurnTime);
+
+    // 시간 종료 시 턴 넘김
+    if (CurrentGameState->RemainingTurnTime <= 0)
+    {
+        GetWorldTimerManager().ClearTimer(TurnTimerHandle);
+        EndTurn();
+    }
+}
+
+void ABaseballGameMode::EndTurn()
+{
+    AChattingGameState* CurrentGameState = GetGameState<AChattingGameState>();
+    if (!CurrentGameState) return;
+
+    // 다음 턴 플레이어 계산
+    int32 NewTurn = (CurrentGameState->CurrentTurnPlayerNumber == 1) ? 2 : 1;
+    CurrentGameState->MulticastUpdateTurn(NewTurn);
+
+    // 새 턴 타이머 시작
+    StartTurnTimer();
 }
 
 void ABaseballGameMode::GenerateRandomNumber()
@@ -74,42 +122,119 @@ void ABaseballGameMode::CompareNumbers(const FString& Guess, int32& Strikes, int
 
 void ABaseballGameMode::BroadcastResult(const int32& PlayerNumber, int32 Strikes, int32 Balls)
 {
-    AChattingGameState* GS = GetGameState<AChattingGameState>();
-    if (GS)
+    AChattingGameState* CurrentGameState = GetGameState<AChattingGameState>();
+    if (CurrentGameState)
     {
-        FString PlayerName = GS->GetPlayerName(PlayerNumber);
-        GS->MulticastBroadcastResult(PlayerName, Strikes, Balls);
+        FString PlayerName = CurrentGameState->GetPlayerName(PlayerNumber);
+        CurrentGameState->MulticastBroadcastResult(PlayerName, Strikes, Balls);
     }
 }
 
-void ABaseballGameMode::DeclareWinner(const int32& PlayerNumber)
+void ABaseballGameMode::DeclareWinner(const int32& WinningPlayerNumber)
 {
-    AChattingGameState* GS = GetGameState<AChattingGameState>();
-    if (GS)
+    AChattingGameState* CurrentGameState = GetGameState<AChattingGameState>();
+
+    if (!CurrentGameState) return;
+    // 모든 PlayerState를 순회하며 승리한 플레이어 찾기
+    for (APlayerState* PS : CurrentGameState->PlayerArray)
     {
-        FString PlayerName = GS->GetPlayerName(PlayerNumber);
-        GS->MulticastDeclareWinner(PlayerName, Answer);
+        ABaseBallPlayerState* PlayerState = Cast<ABaseBallPlayerState>(PS);
+        if (PlayerState && PlayerState->PlayerNumber == WinningPlayerNumber)
+        {
+            // 승리 횟수 증가
+            PlayerState->AddWinCount();
+
+            FString WinnerName = CurrentGameState->GetPlayerName(WinningPlayerNumber);
+            CurrentGameState->MulticastDeclareWinner(WinnerName, Answer);
+            break;
+        }
     }
+    GetWorldTimerManager().ClearTimer(TurnTimerHandle);
+}
+
+void ABaseballGameMode::BroadcastSystemMessage(const FString& SystemMessage)
+{
 }
 
 void ABaseballGameMode::RestartGame()
 {
     GenerateRandomNumber();
-    GameState = EGameState::InProgress;
+    BaseballGameState = EGameState::InProgress;
+    ResetAllPlayerTryCount();
+    // 턴 초기화
+    if (AChattingGameState* ServerGameState = GetGameState<AChattingGameState>())
+    {
+        ServerGameState->CurrentTurnPlayerNumber = 1;
+        ServerGameState->MulticastUpdateTurn(1);
+    }
+
+    StartTurnTimer();
+}
+
+void ABaseballGameMode::ResetAllPlayerTryCount()
+{
+    AChattingGameState* CurrentGameState = GetGameState<AChattingGameState>();
+    for (APlayerState* CurrentPlayerState : CurrentGameState->PlayerArray)
+    {
+        if (ABaseBallPlayerState* TargetPlayerState = Cast<ABaseBallPlayerState>(CurrentPlayerState))
+        {
+            TargetPlayerState->ResetTryCount();
+        }
+    }
+}
+
+bool ABaseballGameMode::IsDrawGame()
+{
+    return false;
 }
 
 void ABaseballGameMode::ServerProcessGuess_Implementation(const FString& Guess, const int32& PlayerNumber)
 {
-    UE_LOG(LogTemp, Warning, TEXT("ABaseballGameMode : ServerProcessGuess : Start"));
-    if (GameState != EGameState::InProgress) return;
+    AChattingGameState* ServerGameState = GetGameState<AChattingGameState>();
+    if (!ServerGameState || BaseballGameState != EGameState::InProgress) return;
+
+    // 1️⃣ 현재 턴 플레이어 검증
+    if (PlayerNumber != ServerGameState->CurrentTurnPlayerNumber)
+    {
+        // 클라이언트에 "잘못된 턴" 메시지 전송
+        if (APlayerController* PC = GetGameInstance()->GetFirstLocalPlayerController())
+        {
+            PC->ClientMessage(FString::Printf(TEXT("당신의 차례가 아닙니다!")));
+        }
+        return;
+    }
+
+    // 2️⃣ 시도 가능 여부 확인
+    ABaseBallPlayerState* PS = nullptr;
+    for (APlayerState* PlayerState : ServerGameState->PlayerArray)
+    {
+        if (ABaseBallPlayerState* BPS = Cast<ABaseBallPlayerState>(PlayerState))
+        {
+            if (BPS->PlayerNumber == PlayerNumber && BPS->TryCount > 0)
+            {
+                PS = BPS;
+                break;
+            }
+        }
+    }
+    if (!PS) return;
 
     int32 Strikes = 0, Balls = 0;
     CompareNumbers(Guess, Strikes, Balls);
     BroadcastResult(PlayerNumber, Strikes, Balls);
 
-    if (Strikes == Answer.Len()) {
+    if (Strikes == Answer.Len())
+    {
         DeclareWinner(PlayerNumber);
-        GameState = EGameState::Finished;
+        BaseballGameState = EGameState::Finished;
         RestartGame();
     }
+    else
+    {
+        // 다음 턴 플레이어 계산 (1 ↔ 2 전환)
+        int32 NewTurn = (ServerGameState->CurrentTurnPlayerNumber == 1) ? 2 : 1;
+        ServerGameState->MulticastUpdateTurn(NewTurn);
+    }
+
+    StartTurnTimer();
 }

@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
 #include "ChattingUserWidget.h"
+#include "LoginWidget.h"
 #include "ChattingPlayerController.generated.h"
 
 /**
@@ -16,9 +17,12 @@ class CH4_CHATTINGGAME_API AChattingPlayerController : public APlayerController
 	GENERATED_BODY()
 
 public:
-    // UMG 위젯을 저장할 변수 (블루프린트에서 편집 가능)
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
     UChattingUserWidget* ChatUI;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
+    ULoginWidget* LoginUI;
 
     // 위젯 반환 getter
     UChattingUserWidget* GetChatWidget() const { return ChatUI; }
@@ -49,4 +53,24 @@ public:
     UFUNCTION(Server, Reliable, WithValidation)
     void ServerSendGuessMessage(const int32& PlayerNumber, const FString& GuessNumber);
 
+
+
+
+    // 위젯 참조용 변수
+    UPROPERTY(EditDefaultsOnly, Category = "UI")
+    TSubclassOf<ULoginWidget> LoginWidgetClass;
+
+    UPROPERTY(EditDefaultsOnly, Category = "UI")
+    TSubclassOf<UChattingUserWidget> GameWidgetClass;
+
+    // 위젯 전환용 함수
+    UFUNCTION(BlueprintCallable)
+    void ShowLoginWidget();
+
+    UFUNCTION(BlueprintCallable)
+    void ShowGameWidget();
+
+
+    UFUNCTION(Server, Reliable, WithValidation)
+    void ServerSetPlayerNickname(const FString& NewNickname);
 };

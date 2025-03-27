@@ -17,8 +17,12 @@ UCLASS()
 class CH4_CHATTINGGAME_API ABaseballGameMode : public AGameMode
 {
 	GENERATED_BODY()
-	
+    
+protected:
+    FTimerHandle TurnTimerHandle;
+
 public:
+
     virtual void BeginPlay() override;
 
     void PostLogin(APlayerController* NewPlayer) override;
@@ -27,11 +31,19 @@ public:
     UFUNCTION(Server, Reliable)
     void ServerProcessGuess(const FString& Guess, const int32& PlayerNumber);
 
+    // 턴 시작 시 호출
+    void StartTurnTimer();
+
+    // 타이머 업데이트 함수
+    void UpdateTurnTimer();
+
+    void EndTurn();
+
 private:
     // 서버에서 생성한 정답값
     FString Answer;
     // 현재 게임의 진행 상태를 표시하는 변수
-    EGameState GameState;
+    EGameState BaseballGameState;
 
     // 겹치지 않는 랜덤한 3자리 숫자를 생성하는 함수
     void GenerateRandomNumber();
@@ -39,10 +51,14 @@ private:
     void CompareNumbers(const FString& Guess, int32& Strikes, int32& Balls);
     // 
     void BroadcastResult(const int32& PlayerNumber, int32 Strikes, int32 Balls);
-    void DeclareWinner(const int32& PlayerNumber);
+    void DeclareWinner(const int32& WinningPlayerNumber);
+
+    void BroadcastSystemMessage(const FString& SystemMessage);
 
     void RestartGame();
+    void ResetAllPlayerTryCount();
 
-    void IsDrawGame(const FString& PlayerName);
-    void IsWinGame(const FString& PlayerName);
+    bool IsThreeNumber();
+    bool IsDrawGame();
+    void IsWinGame();
 };
