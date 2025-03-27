@@ -87,6 +87,20 @@ void AChattingGameState::MulticastUpdateTurn_Implementation(int32 NewTurnNumber)
 
 void AChattingGameState::MulticastBroadcastSystemMessage_Implementation(const FString& SystemMessage)
 {
+    for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+    {
+        AChattingPlayerController* PC = Cast<AChattingPlayerController>(It->Get());
+        if (PC && PC->ChatUI)
+        {
+            UChattingMessageData* NewChatData = NewObject<UChattingMessageData>(PC);
+            if (NewChatData)
+            {
+                NewChatData->SetMessageText(FText::FromString(SystemMessage));
+                // 채팅 UI의 리스트 뷰에 추가
+                PC->GetChatUI()->AddChattingMessage(NewChatData);
+            }
+        }
+    }
 }
 
 void AChattingGameState::MulticastUpdateTurnTime_Implementation(float NewTime)

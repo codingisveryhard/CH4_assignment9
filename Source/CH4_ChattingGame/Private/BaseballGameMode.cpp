@@ -56,6 +56,7 @@ void ABaseballGameMode::UpdateTurnTimer()
     // 시간 종료 시 턴 넘김
     if (CurrentGameState->RemainingTurnTime <= 0)
     {
+        BroadcastSystemMessage((TEXT("[시스템] 시간 내 입력하지 않아 다음 플레이어에게 턴을 넘깁니다.")));
         GetWorldTimerManager().ClearTimer(TurnTimerHandle);
         EndTurn();
     }
@@ -151,12 +152,18 @@ void ABaseballGameMode::DeclareWinner(const int32& WinningPlayerNumber)
 
 void ABaseballGameMode::BroadcastSystemMessage(const FString& SystemMessage)
 {
+    AChattingGameState* CurrentGameState = GetGameState<AChattingGameState>();
+    if (CurrentGameState)
+    {
+        CurrentGameState->MulticastBroadcastSystemMessage(SystemMessage);
+    }
 }
 
 void ABaseballGameMode::RestartGame()
 {
     if (BaseballGameState != EGameState::Finished) return;
 
+    BroadcastSystemMessage((TEXT("[시스템] 게임을 시작합니다.")));
     GenerateRandomNumber();
     BaseballGameState = EGameState::InProgress;
     ResetAllPlayerTryCount();
@@ -182,9 +189,96 @@ void ABaseballGameMode::ResetAllPlayerTryCount()
     }
 }
 
+bool ABaseballGameMode::IsEndGame(const FString& Guess, const int32& PlayerNumber)
+{
+    if (!IsValidGuess(Guess))
+    {
+        for (APlayerState* PlayerState : GameState->PlayerArray)
+        {
+            if (ABaseBallPlayerState* TargetPlayerState = Cast<ABaseBallPlayerState>(PlayerState))
+            {
+                if (TargetPlayerState->PlayerNumber != PlayerNumber)
+                {
+                    DeclareWinner(TargetPlayerState->PlayerNumber);
+                }
+            }
+        }
+        BaseballGameState = EGameState::Finished;
+        GetWorldTimerManager().ClearTimer(TurnTimerHandle);
+        return true;
+    }
+
+    return false;
+}
+
 bool ABaseballGameMode::IsDrawGame()
 {
-    return false;
+    AChattingGameState* ServerGameState = GetGameState<AChattingGameState>();
+
+    if (!ServerGameState) return false;
+
+    for (APlayerState* PlayerState : ServerGameState->PlayerArray)
+    {
+        if (ABaseBallPlayerState* TargetPlayerState = Cast<ABaseBallPlayerState>(PlayerState))
+        {
+            if (TargetPlayerState->TryCount > 0)
+            {
+                return false;
+            }
+        }
+    }
+
+    BroadcastSystemMessage((TEXT("[시스템] 모든 플레이어가 시도횟수를 모두 소진하여 무승부처리 하겠습니다.")));
+    BaseballGameState = EGameState::Finished;
+    GetWorldTimerManager().ClearTimer(TurnTimerHandle);
+    return true;
+}
+
+bool ABaseballGameMode::IsValidGuess(const FString& Guess)
+{
+    if (Guess.Len() != 3 || !Guess.IsNumeric())
+    {
+        BroadcastSystemMessage((TEXT("[시스템] 잘못된 값 입력으로 Out처리 하겠습니다.")));
+        return false;
+    }
+
+    TSet<TCHAR> UniqueChars;
+    for (TCHAR c : Guess)
+    {
+        if (UniqueChars.Contains(c))
+        {
+            BroadcastSystemMessage((TEXT("[시스템] 잘못된 값 입력으로 Out처리 하겠습니다.")));
+            return false;
+        }
+        UniqueChars.Add(c);
+    }
+
+    int32 Balls = 0;
+    int32 Strikes = 0;
+    for (int32 i = 0; i < 3; i++)
+    {
+        for (int32 j = 0; j < 3; j++)
+        {
+            if (Answer[i] == Guess[j])
+            {
+                if (i == j)
+                {
+                    Strikes++;
+                }
+                else
+                {
+                    Balls++;
+                }
+            }
+        }
+    }
+    if (Strikes == 0 && Balls == 0)
+    {
+        BroadcastSystemMessage((TEXT("[시스템] 3 Out으로 즉시 패배했습니다.")));
+        return false;
+    }
+
+    return true;
 }
 
 void ABaseballGameMode::ServerProcessGuess_Implementation(const FString& Guess, const int32& PlayerNumber)
@@ -201,19 +295,8 @@ void ABaseballGameMode::ServerProcessGuess_Implementation(const FString& Guess, 
         return;
     }
 
-    ABaseBallPlayerState* PS = nullptr;
-    for (APlayerState* PlayerState : ServerGameState->PlayerArray)
-    {
-        if (ABaseBallPlayerState* BPS = Cast<ABaseBallPlayerState>(PlayerState))
-        {
-            if (BPS->PlayerNumber == PlayerNumber && BPS->TryCount > 0)
-            {
-                PS = BPS;
-                break;
-            }
-        }
-    }
-    if (!PS) return;
+    if (IsDrawGame()) return;
+    if (IsEndGame(Guess, PlayerNumber)) return;
 
     int32 Strikes = 0, Balls = 0;
     CompareNumbers(Guess, Strikes, Balls);

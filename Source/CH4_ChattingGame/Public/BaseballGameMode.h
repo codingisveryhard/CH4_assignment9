@@ -59,7 +59,7 @@ private:
 
     void ResetAllPlayerTryCount();
 
-    bool IsThreeNumber();
+    bool IsEndGame(const FString& Guess, const int32& PlayerNumber);
     bool IsDrawGame();
-    void IsWinGame();
+    bool IsValidGuess(const FString& Guess);
 };

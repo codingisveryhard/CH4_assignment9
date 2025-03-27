@@ -121,28 +121,14 @@ bool AChattingPlayerController::ServerSendGuessMessage_Validate(const int32& Pla
 
 void AChattingPlayerController::ServerSendGuessMessage_Implementation(const int32& PlayerNumber, const FString& GuessNumber)
 {
-    // 3자리 숫자인지 확인하고 게임 로직 처리
-    if (GuessNumber.Len() == 3 && GuessNumber.IsNumeric())
+    ABaseBallPlayerState* PS = GetPlayerState<ABaseBallPlayerState>();
+    if (PS)
     {
-        // 플레이어 상태 확인
-        ABaseBallPlayerState* PS = GetPlayerState<ABaseBallPlayerState>();
-        if (PS && PS->TryCount > 0)
+        ABaseballGameMode* BaseballGM = Cast<ABaseballGameMode>(GetWorld()->GetAuthGameMode());
+        if (BaseballGM)
         {
-            // 게임 모드에 추측 전달
-            ABaseballGameMode* BaseballGM = Cast<ABaseballGameMode>(GetWorld()->GetAuthGameMode());
-            if (BaseballGM)
-            {
-                BaseballGM->ServerProcessGuess(GuessNumber, PlayerNumber);
-            }
-        }
-        else if (PS && PS->TryCount <= 0)
-        {
-            // 시도 횟수가 없을 때 메시지 표시
-            AChattingGameState* ChatGameState = GetWorld()->GetGameState<AChattingGameState>();
-            if (ChatGameState)
-            {
-                ChatGameState->MulticastReceiveChatMessage(TEXT("시스템: 남은 시도 횟수가 없습니다."));
-            }
+            PS->TryCount--;
+            BaseballGM->ServerProcessGuess(GuessNumber, PlayerNumber);
         }
     }
 }
