@@ -17,24 +17,25 @@
 ---
 # 📋기능
 ## 1. 구현된 기능
+---
 ### 1. 닉네임 설정
 ![image](https://github.com/user-attachments/assets/991bb427-38fa-47a2-9923-d6d8afd91562)
 + 처음 실행하게 되면 만나게 되는 화면입니다.
 + 위젯을 통해 텍스트 박스, 버튼, 텍스트를 이용해 간단히 구현하였습니다.
 + 원하는 닉네임을 입력하게 되면 채팅 시 닉네임이 반영됩니다.
-
+---
 ### 2. 채팅 기능
 ![image](https://github.com/user-attachments/assets/e7682fe1-f54b-4c0d-aa8e-e324432826f1)
 + 게임을 시작하지 않은 상태에서는 채팅 서버로도 사용할 수 있습니다.
 + 입력한 닉네임을 통해 자신과 상대가 누구인지 구별할 수 있습니다.
 + 채팅이 길어지게 될 경우 스크롤 바를 통해 이전의 채팅도 확인할 수 있습니다.
-
+---
 ### 3. 게임 시작 버튼
 ![image](https://github.com/user-attachments/assets/e3929ae5-3940-411d-b827-d7a2e3db880d)
 + 게임 시작 버튼은 호스트만 사용할 수 있습니다.
 + 버튼을 클릭하게 되면 숫자 야구 게임을 시작할 수 있습니다.
 + 게임을 시작한 상태에서 다시 누르더라도 작동하지 않으며 게임이 종료된 상태에서만 실행됩니다.
-
+---
 ### 4. 턴제 기능
 ![image](https://github.com/user-attachments/assets/974d5d83-2b6c-42bd-9d56-6aa5043d5ef1)
 + 게임이 시작되면 먼저 호스트부터 턴이 주어집니다.
@@ -42,13 +43,13 @@
 + 주어진 타이머 동안 입력하지 못할 시 기회가 하나 소진되며 상대에게 턴이 넘어갑니다.
 ![image](https://github.com/user-attachments/assets/4dd90f66-af4f-4212-a364-5337835e040c)
 + 자신의 턴이 아닌 경우 입력한 값은 일반 채팅으로 처리됩니다.
-
+---
 ### 5. 정답 판별 기능
 ![image](https://github.com/user-attachments/assets/fe37cdcc-466f-4b32-9494-2d7562dbce4a)
 + 입력된 값을 정답과 비교하여 스트라이크, 볼, 아웃을 판별하고 정답일 시 승리합니다.
 ![image](https://github.com/user-attachments/assets/183deced-1474-4940-a7fd-133b5f72ab0b)
 + 잘못된 값(중복된 숫자, 3자리 숫자가 아닌경우, 일반 문자)를 입력하게 될 경우 즉시 패배하여 상대가 승리하게됩니다.
-
+---
 ### 6. 3인 이상 플레이 기능
 ![image](https://github.com/user-attachments/assets/4a6f5304-3159-421f-a205-3db228cbc63c)
 + 4인까지도 플레이 할 수 있습니다.
