@@ -127,7 +127,7 @@ void AChattingPlayerController::ServerSendGuessMessage_Implementation(const int3
         ABaseballGameMode* BaseballGM = Cast<ABaseballGameMode>(GetWorld()->GetAuthGameMode());
         if (BaseballGM)
         {
-            PS->TryCount--;
+            PS->UseTryCount();
             BaseballGM->ServerProcessGuess(GuessNumber, PlayerNumber);
         }
     }

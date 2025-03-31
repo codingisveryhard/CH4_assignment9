@@ -96,7 +96,6 @@ void AChattingGameState::MulticastBroadcastSystemMessage_Implementation(const FS
             if (NewChatData)
             {
                 NewChatData->SetMessageText(FText::FromString(SystemMessage));
-                // 채팅 UI의 리스트 뷰에 추가
                 PC->GetChatUI()->AddChattingMessage(NewChatData);
             }
         }
@@ -107,7 +106,7 @@ void AChattingGameState::MulticastUpdateTurnTime_Implementation(float NewTime)
 {
     RemainingTurnTime = NewTime;
 
-    if (!HasAuthority()) // 클라이언트에서만 실행
+    if (!HasAuthority())
     {
         OnRep_RemainingTurnTime();
     }

@@ -56,7 +56,24 @@ void ABaseballGameMode::UpdateTurnTimer()
     // 시간 종료 시 턴 넘김
     if (CurrentGameState->RemainingTurnTime <= 0)
     {
-        BroadcastSystemMessage((TEXT("[시스템] 시간 내 입력하지 않아 다음 플레이어에게 턴을 넘깁니다.")));
+        // 현재 턴 플레이어의 시도 횟수를 차감
+        for (APlayerState* PlayerState : CurrentGameState->PlayerArray)
+        {
+            if (ABaseBallPlayerState* CurrentPlayerState = Cast<ABaseBallPlayerState>(PlayerState))
+            {
+                if (CurrentPlayerState->PlayerNumber == CurrentGameState->CurrentTurnPlayerNumber)
+                {
+                    CurrentPlayerState->UseTryCount();
+                }
+            }
+        }
+
+        if (IsDrawGame()) return;
+
+        // 시간 만료 메시지 전송
+        BroadcastSystemMessage(TEXT("[시스템] 시간 내 입력하지 않아, 턴을 넘깁니다."));
+
+        // 타이머 정리 후 턴 종료 처리
         GetWorldTimerManager().ClearTimer(TurnTimerHandle);
         EndTurn();
     }
@@ -68,7 +85,9 @@ void ABaseballGameMode::EndTurn()
     if (!CurrentGameState) return;
 
     // 다음 턴 플레이어 계산
-    int32 NewTurn = (CurrentGameState->CurrentTurnPlayerNumber == 1) ? 2 : 1;
+    int32 CurrentIndex = CurrentGameState->CurrentTurnPlayerNumber;
+    int32 NewIndex = CurrentIndex % CurrentGameState->PlayerArray.Num();
+    int32 NewTurn = NewIndex + 1;
     CurrentGameState->MulticastUpdateTurn(NewTurn);
 
     // 새 턴 타이머 시작
@@ -221,14 +240,14 @@ bool ABaseballGameMode::IsDrawGame()
     {
         if (ABaseBallPlayerState* TargetPlayerState = Cast<ABaseBallPlayerState>(PlayerState))
         {
-            if (TargetPlayerState->TryCount > 0)
+            if (TargetPlayerState->GetTryCount() > 0)
             {
                 return false;
             }
         }
     }
 
-    BroadcastSystemMessage((TEXT("[시스템] 모든 플레이어가 시도횟수를 모두 소진하여 무승부처리 하겠습니다.")));
+    BroadcastSystemMessage((TEXT("[시스템] 모든 플레이어가 턴을 모두 소진하여 무승부처리 하겠습니다.")));
     BaseballGameState = EGameState::Finished;
     GetWorldTimerManager().ClearTimer(TurnTimerHandle);
     return true;
@@ -295,7 +314,6 @@ void ABaseballGameMode::ServerProcessGuess_Implementation(const FString& Guess, 
         return;
     }
 
-    if (IsDrawGame()) return;
     if (IsEndGame(Guess, PlayerNumber)) return;
 
     int32 Strikes = 0, Balls = 0;
@@ -308,13 +326,14 @@ void ABaseballGameMode::ServerProcessGuess_Implementation(const FString& Guess, 
         BaseballGameState = EGameState::Finished;
         return;
     }
-    else
-    {
-        int32 CurrentIndex = ServerGameState->CurrentTurnPlayerNumber;
-        int32 NewIndex = CurrentIndex % ServerGameState->PlayerArray.Num();
-        int32 NewTurn = NewIndex + 1;
-        ServerGameState->MulticastUpdateTurn(NewTurn);
-    }
+
+    if (IsDrawGame()) return;
+    
+
+    int32 CurrentIndex = ServerGameState->CurrentTurnPlayerNumber;
+    int32 NewIndex = CurrentIndex % ServerGameState->PlayerArray.Num();
+    int32 NewTurn = NewIndex + 1;
+    ServerGameState->MulticastUpdateTurn(NewTurn);
 
     StartTurnTimer();
 }

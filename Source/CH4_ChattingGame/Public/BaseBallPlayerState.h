@@ -13,37 +13,37 @@ class CH4_CHATTINGGAME_API ABaseBallPlayerState : public APlayerState
 {
 	GENERATED_BODY()
 	
+private:
+
+
 public:
     ABaseBallPlayerState();
 
-    // 플레이어 넘버 할당
     UPROPERTY(Replicated, BlueprintReadOnly, Category = "Player")
     int32 PlayerNumber;
 
     UPROPERTY(Replicated, BlueprintReadOnly, Category = "Player")
     FString PlayerNickname;
 
-    // 남은 도전 기회
-    UPROPERTY(Replicated, BlueprintReadWrite, Category = "Baseball")
-    int32 TryCount;
-
-    // 승리 횟수
     UPROPERTY(Replicated, BlueprintReadWrite, Category = "Baseball")
     int32 WinCount;
 
-    // 남은 기회 감소 함수
+    UPROPERTY(Replicated, BlueprintReadWrite, Category = "Baseball")
+    int32 TryCount;
+
     UFUNCTION(BlueprintCallable, Category = "Baseball")
     void UseTryCount();
 
-    // 승리 카운트 증가 함수
     UFUNCTION(BlueprintCallable, Category = "Baseball")
-    void AddWinCount();
+    int32 GetTryCount();
 
-    // 남은 기회 감소 함수
     UFUNCTION(BlueprintCallable, Category = "Baseball")
     void ResetTryCount();
 
-    // 플레이어 이름 교체 함수
+    UFUNCTION(BlueprintCallable, Category = "Baseball")
+    void AddWinCount();
+
+
     UFUNCTION(BlueprintCallable, Category = "Baseball")
     void SetPlayerNickname(const FString& NewPlayerName);
 
@@ -57,6 +57,5 @@ public:
     UPROPERTY(BlueprintAssignable, Category = "Player")
     FOnPlayerNicknameUpdated OnPlayerNicknameUpdated;
 
-    // 복제 속성 설정
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 };

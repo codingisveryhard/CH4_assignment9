@@ -16,10 +16,16 @@ ABaseBallPlayerState::ABaseBallPlayerState()
 
 void ABaseBallPlayerState::UseTryCount()
 {
-    if (HasAuthority() && TryCount > 0)
+    if (HasAuthority())
     {
         TryCount--;
+        UE_LOG(LogTemp, Warning, TEXT("UseTryCount!"));
     }
+}
+
+int32 ABaseBallPlayerState::GetTryCount()
+{
+    return TryCount;
 }
 
 void ABaseBallPlayerState::AddWinCount()
